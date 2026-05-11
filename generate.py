@@ -3,6 +3,7 @@ from icalendar import Calendar, Event
 
 from engine.cn_exact import fetch_cn_raw, parse_cn
 from engine.ru import fetch_ru
+from engine.cluster import cluster_dates, is_golden_week
 
 
 def build_ics(events):
@@ -22,16 +23,24 @@ def build_ics(events):
 def build_cn_events(holidays, workdays):
     events = []
 
-    for d in holidays:
+    # 🧠 连休识别
+    holiday_clusters = cluster_dates(holidays)
+    work_clusters = cluster_dates(workdays)
+
+    # 🟢 假期 / 黄金周
+    for start, end in holiday_clusters:
+        label = "黄金周" if is_golden_week(start, end) else "连休"
+
         events.append({
-            "date": d,
-            "name": "🇨🇳 法定假期"
+            "date": start.strftime("%Y-%m-%d"),
+            "name": f"🇨🇳 {label} {start} → {end}"
         })
 
-    for d in workdays:
+    # 🔴 补班区间
+    for start, end in work_clusters:
         events.append({
-            "date": d,
-            "name": "🇨🇳 补班（调休）"
+            "date": start.strftime("%Y-%m-%d"),
+            "name": f"🇨🇳 补班区间 {start} → {end}"
         })
 
     return events
