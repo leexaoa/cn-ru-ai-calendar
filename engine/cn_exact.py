@@ -27,48 +27,44 @@ def fetch_cn_holidays(year: int) -> List[Tuple[str, str]]:
         data = response.json()
         holidays = []
         
-        # holiday-cn的数据格式可能是两种:
-        # 1. {"days": {"2026-01-01": {"type": 1, "name": "元旦"}}}
-        # 2. {"days": [{"date": "2026-01-01", "type": 1, "name": "元旦"}]}
+        # holiday-cn新版格式: {"days": [{"date": "2026-01-01", "name": "元旦", "isOffDay": true}]}
+        # isOffDay: true = 假期/休息日，false = 调休补班
         
         if not data or 'days' not in data:
             return []
         
         days_data = data.get('days', [])
         
-        # 处理格式1: days是字典
-        if isinstance(days_data, dict):
-            for date_str, day_info in days_data.items():
-                if not isinstance(day_info, dict):
-                    continue
-                    
-                day_type = day_info.get('type')
-                name = day_info.get('name', '')
-                
-                if day_type == 1:  # 假期
-                    if name:
-                        holidays.append((name, date_str))
-                elif day_type == 2:  # 调休补班
-                    if name:
-                        holidays.append((f"调休（{name}）", date_str))
-        
-        # 处理格式2: days是列表
-        elif isinstance(days_data, list):
+        # 处理days是列表的情况（当前holiday-cn格式）
+        if isinstance(days_data, list):
             for day in days_data:
                 if not isinstance(day, dict):
                     continue
                     
                 date_str = day.get('date')
-                day_type = day.get('type')
                 name = day.get('name', '')
+                is_off_day = day.get('isOffDay')  # true: 假期, false: 调休
                 
-                if date_str:
+                if date_str and name:
+                    if is_off_day:  # 假期/休息日
+                        holidays.append((name, date_str))
+                    else:  # 调休补班
+                        holidays.append((f"调休（{name}）", date_str))
+        
+        # 向后兼容处理：days是字典的情况（旧版格式）
+        elif isinstance(days_data, dict):
+            for date_str, day_info in days_data.items():
+                if not isinstance(day_info, dict):
+                    continue
+                    
+                name = day_info.get('name', '')
+                day_type = day_info.get('type')  # 旧格式: 1=假期, 2=调休
+                
+                if name:
                     if day_type == 1:  # 假期
-                        if name:
-                            holidays.append((name, date_str))
+                        holidays.append((name, date_str))
                     elif day_type == 2:  # 调休补班
-                        if name:
-                            holidays.append((f"调休（{name}）", date_str))
+                        holidays.append((f"调休（{name}）", date_str))
         
         return holidays
     
