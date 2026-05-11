@@ -36,8 +36,8 @@ def fetch_cn_holidays(year):
         return {}
 
 
-def fetch_ru_holidays():
-    """从谷歌日历获取俄罗斯假期"""
+def fetch_ru_holidays(year):
+    """从谷歌日历获取指定年份的俄罗斯假期"""
     try:
         # 俄罗斯官方假期Google Calendar (俄文)
         url = "https://calendar.google.com/calendar/ical/en.russian%23holiday%40group.v.calendar.google.com/public/basic.ics"
@@ -58,13 +58,15 @@ def fetch_ru_holidays():
                     else:
                         date_str = dt.dt.isoformat()
                     
-                    summary = str(component.get('summary', 'Holiday'))
-                    ru_holidays[date_str] = summary
+                    # 只保留指定年份的假期
+                    if date_str.startswith(str(year)):
+                        summary = str(component.get('summary', 'Holiday'))
+                        ru_holidays[date_str] = summary
         
         return ru_holidays
     
     except requests.exceptions.RequestException as e:
-        print(f"  ❌ 获取俄罗斯假期失败: {e}")
+        print(f"  ❌ 获取 {year} 年俄罗斯假期失败: {e}")
         return {}
 
 
@@ -128,15 +130,14 @@ def main():
         else:
             print(f"     ❌ 获取失败或无数据")
         
-        # 仅在处理第一年时获取俄罗斯假期（因为Google Calendar源是全年的）
-        if year == 2025:
-            print(f"  🇷🇺 获取俄罗斯假期...")
-            ru_holidays = fetch_ru_holidays()
-            if ru_holidays:
-                print(f"     ✅ 成功获取 {len(ru_holidays)} 条数据")
-                ru_holidays_all.update(ru_holidays)
-            else:
-                print(f"     ❌ 获取失败或无数据")
+        # 获取俄罗斯假期
+        print(f"  🇷🇺 获取俄罗斯假期...")
+        ru_holidays = fetch_ru_holidays(year)
+        if ru_holidays:
+            print(f"     ✅ 成功获取 {len(ru_holidays)} 条数据")
+            ru_holidays_all.update(ru_holidays)
+        else:
+            print(f"     ❌ 获取失败或无数据")
     
     # 创建并保存日历
     cal = create_ics_calendar(cn_holidays_all, ru_holidays_all)
