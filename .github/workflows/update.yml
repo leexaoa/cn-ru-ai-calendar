@@ -1,0 +1,32 @@
+name: update calendar
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: setup python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    - name: install
+      run: pip install ics
+
+    - name: generate
+      run: python generate.py
+
+    - name: commit
+      run: |
+        git config user.name bot
+        git config user.email bot@github.com
+        git add calendar.ics
+        git commit -m "update" || echo "no change"
+        git push
