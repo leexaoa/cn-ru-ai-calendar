@@ -122,35 +122,17 @@ def fetch_russia_holidays():
 def generate_cn_py_file(holidays, workdays):
     """生成 engine/cn_exact.py 文件"""
     
-    content = '''"""
-中国节假日数据
-数据来源：国务院办公厅
-自动更新于：''' + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '''
-"""
-
-def fetch_cn_holidays():
-    """获取中国假期数据，返回 [(假期名称, 日期字符串), ...]"""
-    holidays = [
-'''
+    content = '''#!/usr/bin/env python3\n# -*- coding: utf-8 -*-\n\"\"\"\n中国官方节假日数据\n数据来源：国务院办公厅\n自动更新于：''' + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '''\n\"\"\"\n\nfrom typing import List, Tuple\n\nCN_HOLIDAYS = {\n    2026: [\n'''
     
     for date_str, name in sorted(holidays.items()):
         content += f'        ("{name}", "{date_str}"),\n'
     
-    content += '''    ]
-    return holidays
-
-
-def fetch_cn_workdays():
-    """获取中国调休/补班日期，返回 [(说明, 日期字符串), ...]"""
-    workdays = [
-'''
+    content += '''    ],\n}\n\n\ndef fetch_cn_holidays(year: int) -> List[Tuple[str, str]]:\n    \"\"\"\n    获取指定年份的中国假期\n    \n    参数:\n        year: 年份，如2026等\n    \n    返回:\n        [(假期名称, 日期字符串), ...]\n    \"\"\"\n    return CN_HOLIDAYS.get(year, [])\n\n\nCN_WORKDAYS = {\n    2026: [\n'''
     
     for date_str, name in sorted(workdays.items()):
         content += f'        ("{name}", "{date_str}"),\n'
     
-    content += '''    ]
-    return workdays
-'''
+    content += '''    ],\n}\n\n\ndef fetch_cn_workdays(year: int) -> List[Tuple[str, str]]:\n    \"\"\"\n    获取指定年份的中国调休/补班日期\n    \n    参数:\n        year: 年份，如2026等\n    \n    返回:\n        [(说明, 日期字符串), ...]\n    \"\"\"\n    return CN_WORKDAYS.get(year, [])\n'''
     
     return content
 
@@ -158,35 +140,17 @@ def fetch_cn_workdays():
 def generate_ru_py_file(holidays, workdays):
     """生成 engine/ru.py 文件"""
     
-    content = '''"""
-俄罗斯节假日数据
-数据来源：俄罗斯联邦官方假期日程
-自动更新于：''' + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '''
-"""
-
-def fetch_ru_holidays():
-    """获取俄罗斯假期数据，返回 [(假期名称, 日期字符串), ...]"""
-    holidays = [
-'''
+    content = '''#!/usr/bin/env python3\n# -*- coding: utf-8 -*-\n\"\"\"\n俄罗斯官方节假日数据\n数据来源：俄罗斯联邦官方假期日程\n自动更新于：''' + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '''\n\"\"\"\n\nfrom typing import List, Tuple\n\nRU_HOLIDAYS = {\n    2026: [\n'''
     
     for date_str, name in sorted(holidays.items()):
         content += f'        ("{name}", "{date_str}"),\n'
     
-    content += '''    ]
-    return holidays
-
-
-def fetch_ru_workdays():
-    """获取俄罗斯调休/补班日期，返回 [(说明, 日期字符串), ...]"""
-    workdays = [
-'''
+    content += '''    ],\n}\n\n\ndef fetch_ru_holidays(year: int) -> List[Tuple[str, str]]:\n    \"\"\"\n    获取指定年份的俄罗斯假期\n    \n    参数:\n        year: 年份，如2026等\n    \n    返回:\n        [(假期名称, 日期字符串), ...]\n    \"\"\"\n    return RU_HOLIDAYS.get(year, [])\n\n\nRU_WORKDAYS = {\n    2026: [\n'''
     
     for date_str, name in sorted(workdays.items()):
         content += f'        ("{name}", "{date_str}"),\n'
     
-    content += '''    ]
-    return workdays
-'''
+    content += '''    ],\n}\n\n\ndef fetch_ru_workdays(year: int) -> List[Tuple[str, str]]:\n    \"\"\"\n    获取指定年份的俄罗斯调休/补班日期\n    \n    参数:\n        year: 年份，如2026等\n    \n    返回:\n        [(说明, 日期字符串), ...]\n    \"\"\"\n    return RU_WORKDAYS.get(year, [])\n'''
     
     return content
 
