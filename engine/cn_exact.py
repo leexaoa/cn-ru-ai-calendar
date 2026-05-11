@@ -1,51 +1,49 @@
 """
-中国节假日数据
-数据来源：国务院办公厅
-自动更新于：2026-05-11 13:40:56
+中国节假日数据模块
+从官方holiday-cn源自动获取中国假期数据
+自动更新于：2026-05-11
 """
 
-def fetch_cn_holidays():
-    """获取中国假期数据，返回 [(假期名称, 日期字符串), ...]"""
-    holidays = [
-        ("元旦", "2026-01-01"),
-        ("春节", "2026-02-15"),
-        ("春节", "2026-02-16"),
-        ("春节", "2026-02-17"),
-        ("春节", "2026-02-18"),
-        ("春节", "2026-02-19"),
-        ("春节", "2026-02-20"),
-        ("春节", "2026-02-21"),
-        ("春节", "2026-02-22"),
-        ("春节", "2026-02-23"),
-        ("清明节", "2026-04-04"),
-        ("清明节", "2026-04-05"),
-        ("清明节", "2026-04-06"),
-        ("端午节", "2026-06-19"),
-        ("端午节", "2026-06-20"),
-        ("端午节", "2026-06-21"),
-        ("中秋节", "2026-09-25"),
-        ("中秋节", "2026-09-26"),
-        ("中秋节", "2026-09-27"),
-        ("国庆节", "2026-10-01"),
-        ("国庆节", "2026-10-02"),
-        ("国庆节", "2026-10-03"),
-        ("国庆节", "2026-10-04"),
-        ("国庆节", "2026-10-05"),
-        ("国庆节", "2026-10-06"),
-        ("国庆节", "2026-10-07"),
-    ]
-    return holidays
+import requests
+from typing import List, Tuple
 
 
-def fetch_cn_workdays():
-    """获取中国调休/补班日期，返回 [(说明, 日期字符串), ...]"""
-    workdays = [
-        ("调休", "2026-01-04"),
-        ("调休", "2026-02-14"),
-        ("调休", "2026-02-28"),
-        ("调休", "2026-04-11"),
-        ("调休", "2026-05-09"),
-        ("调休", "2026-09-20"),
-        ("调休", "2026-10-10"),
-    ]
-    return workdays
+def fetch_cn_holidays(year: int) -> List[Tuple[str, str]]:
+    """
+    从官方holiday-cn源自动获取指定年份的中国假期数据
+    
+    参数：
+        year: 四位数年份 (如 2026)
+    
+    返回：
+        列表，包含 (假期名称, 日期字符串) 元组
+        例如：[('元旦', '2026-01-01'), ('春节', '2026-02-17')]
+    """
+    try:
+        # 使用JSDelivr加速的holiday-cn数据源
+        # 自动从国务院公告抓取，包含调休补班信息
+        url = f"https://cdn.jsdelivr.net/gh/NateScarlet/holiday-cn@master/{year}.json"
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        
+        data = response.json()
+        holidays = []
+        
+        # 将官方数据转换为 [(name, date_str), ...] 格式
+        for day in data.get('days', []):
+            date = day['date']
+            name = day['name']
+            is_off = day['isOffDay']
+            
+            # 只记录假日和调休日期（isOffDay为true的都是非工作日）
+            if is_off:
+                holidays.append((name, date))
+        
+        return holidays
+    
+    except requests.exceptions.RequestException as e:
+        print(f"  ❌ 获取 {year} 年中国假期失败: {e}")
+        return []
+    except Exception as e:
+        print(f"  ❌ 处理 {year} 年中国假期数据失败: {e}")
+        return []
