@@ -1,78 +1,56 @@
 """
-节假日聚类和黄金周识别
-将单个日期合并成连续的日期范围，并识别黄金周
+俄罗斯节假日数据模块
+从Google Calendar官方源获取俄罗斯假期数据
+自动更新于：2026-05-11
 """
-from datetime import datetime, timedelta
+
+import requests
+from icalendar import Calendar
+from datetime import datetime
 from typing import List, Tuple
 
 
-def cluster_dates(dates: List[str]) -> List[Tuple[datetime, datetime]]:
+def fetch_ru_holidays(year: int) -> List[Tuple[str, str]]:
     """
-    将日期列表聚类成连续的日期范围
-    输入: ["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-05", ...]
-    输出: [
-        (datetime(2024, 1, 1), datetime(2024, 1, 3)),
-        (datetime(2024, 1, 5), datetime(2024, 1, 5)),
-        ...
-    ]
+    从Google Calendar获取指定年份的俄罗斯假期数据
+    
+    参数：
+        year: 四位数年份 (如 2026)
+    
+    返回：
+        列表，包含 (假期名称, 日期字符串) 元组
+        例如：[('New Year', '2026-01-01'), ('Orthodox Christmas', '2026-01-07')]
     """
-    if not dates:
-        return []
-
-    # 转换为datetime对象并排序
-    date_objs = sorted([datetime.strptime(d, "%Y-%m-%d") for d in dates])
-
-    clusters = []
-    start = date_objs[0]
-    end = date_objs[0]
-
-    for i in range(1, len(date_objs)):
-        current = date_objs[i]
+    try:
+        # 俄罗斯官方假期Google Calendar
+        url = "https://calendar.google.com/calendar/ical/en.russian%23holiday%40group.v.calendar.google.com/public/basic.ics"
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
         
-        # 如果日期连续（相差1天），则延续end
-        if (current - end).days == 1:
-            end = current
-        else:
-            # 日期不连续，保存当前集群，开始新集群
-            clusters.append((start, end))
-            start = current
-            end = current
-
-    # 添加最后一个集群
-    clusters.append((start, end))
-
-    return clusters
-
-
-def is_golden_week(start: datetime, end: datetime) -> bool:
-    """
-    判断是否为黄金周
-    黄金周标准：
-    - 春节：至少7天
-    - 国庆：至少7天
-    - 其他连休不算黄金周
-    """
-    days = (end - start).days + 1
-    month = start.month
-
-    # 春节黄金周（通常2月）或国庆黄金周（通常10月）
-    if days >= 7 and month in (1, 2, 10):
-        return True
-
-    return False
-
-
-def format_cluster(start: datetime, end: datetime, emoji: str = "") -> str:
-    """
-    格式化日期范围为可读的字符串
-    示例: "2024-01-01 ~ 2024-01-07"
-    """
-    if start == end:
-        return f"{emoji} {start.strftime('%Y-%m-%d')}"
-    else:
-        return f"{emoji} {start.strftime('%Y-%m-%d')} ~ {end.strftime('%Y-%m-%d')}"
-
-
-def get_cluster_days(start: datetime, end: datetime) -> int:
-    """获取日期范围的天数"""
-    return (end - start).days + 1
+        # 解析ICS格式内容
+        cal = Calendar.from_ical(response.content)
+        holidays = []
+        
+        for component in cal.walk():
+            if component.name == "VEVENT":
+                dt = component.get('dtstart')
+                if dt:
+                    # 转换为日期字符串 YYYY-MM-DD
+                    if hasattr(dt.dt, 'date'):
+                        date_str = dt.dt.date().isoformat()
+                    else:
+                        date_str = dt.dt.isoformat()
+                    
+                    # 只保留指定年份的假期
+                    if date_str.startswith(str(year)):
+                        summary = str(component.get('summary', 'Holiday'))
+                        holidays.append((summary, date_str))
+        
+        return holidays
+    
+    except requests.exceptions.RequestException as e:
+        print(f"  ❌ 获取 {year} 年俄罗斯假期失败: {e}")
+        return []
+    except Exception as e:
+        print(f"  ❌ 处理 {year} 年俄罗斯假期数据失败: {e}")
+        return []
