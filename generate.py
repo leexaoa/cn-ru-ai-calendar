@@ -40,27 +40,26 @@ def generate_calendar():
             
             if not cn_holidays_list:
                 print(f"  ℹ️ {year}年没有中国假期数据")
-                continue
-            
-            print(f"  ✓ 获得 {len(cn_holidays_list)} 个中国假期")
-            
-            # 添加中国假期到日历
-            for holiday_name, holiday_date_str in cn_holidays_list:
-                try:
-                    holiday_date = datetime.strptime(holiday_date_str, '%Y-%m-%d').date()
-                    event = Event()
-                    event.add('summary', f'🇨🇳 {holiday_name}')
-                    event.add('dtstart', holiday_date)
-                    event.add('dtend', holiday_date + timedelta(days=1))
-                    event.add('dtstamp', datetime.now(timezone.utc))
-                    event.add('uid', f"cn-holiday-{holiday_date_str}@cn-ru-calendar")
-                    event.add('categories', 'Holiday,China')
-                    event.add('description', f'中国假期: {holiday_name} ({holiday_date_str})')
-                    event.add('transp', 'TRANSPARENT')
-                    cal.add_component(event)
-                    cn_count += 1
-                except Exception as e:
-                    print(f"    ❌ 添加中国假期 {holiday_date_str} 失败: {e}")
+            else:
+                print(f"  ✓ 获得 {len(cn_holidays_list)} 个中国假期")
+                
+                # 添加中国假期到日历
+                for holiday_name, holiday_date_str in cn_holidays_list:
+                    try:
+                        holiday_date = datetime.strptime(holiday_date_str, '%Y-%m-%d').date()
+                        event = Event()
+                        event.add('summary', f'🇨🇳 {holiday_name}')
+                        event.add('dtstart', holiday_date)
+                        event.add('dtend', holiday_date + timedelta(days=1))
+                        event.add('dtstamp', datetime.now(timezone.utc))
+                        event.add('uid', f"cn-holiday-{holiday_date_str}@cn-ru-calendar")
+                        event.add('categories', 'Holiday,China')
+                        event.add('description', f'中国假期: {holiday_name} ({holiday_date_str})')
+                        event.add('transp', 'TRANSPARENT')
+                        cal.add_component(event)
+                        cn_count += 1
+                    except Exception as e:
+                        print(f"    ❌ 添加中国假期 {holiday_date_str} 失败: {e}")
                     
         except Exception as e:
             print(f"  ❌ 获取 {year} 年中国假期失败: {e}")
@@ -73,27 +72,26 @@ def generate_calendar():
             
             if not ru_holidays_list:
                 print(f"  ℹ️ {year}年没有俄罗斯假期数据")
-                continue
-            
-            print(f"  ✓ 获得 {len(ru_holidays_list)} 个俄罗斯假期")
-            
-            # 添加俄罗斯假期到日历
-            for holiday_name, holiday_date_str in ru_holidays_list:
-                try:
-                    holiday_date = datetime.strptime(holiday_date_str, '%Y-%m-%d').date()
-                    event = Event()
-                    event.add('summary', f'🇷🇺 {holiday_name}')
-                    event.add('dtstart', holiday_date)
-                    event.add('dtend', holiday_date + timedelta(days=1))
-                    event.add('dtstamp', datetime.now(timezone.utc))
-                    event.add('uid', f"ru-holiday-{holiday_date_str}@cn-ru-calendar")
-                    event.add('categories', 'Holiday,Russia')
-                    event.add('description', f'俄罗斯假期: {holiday_name}')
-                    event.add('transp', 'TRANSPARENT')
-                    cal.add_component(event)
-                    ru_count += 1
-                except Exception as e:
-                    print(f"    ❌ 添加俄罗斯假期 {holiday_date_str} ({holiday_name}) 失败: {e}")
+            else:
+                print(f"  ✓ 获得 {len(ru_holidays_list)} 个俄罗斯假期")
+                
+                # 添加俄罗斯假期到日历
+                for holiday_name, holiday_date_str in ru_holidays_list:
+                    try:
+                        holiday_date = datetime.strptime(holiday_date_str, '%Y-%m-%d').date()
+                        event = Event()
+                        event.add('summary', f'🇷🇺 {holiday_name}')
+                        event.add('dtstart', holiday_date)
+                        event.add('dtend', holiday_date + timedelta(days=1))
+                        event.add('dtstamp', datetime.now(timezone.utc))
+                        event.add('uid', f"ru-holiday-{holiday_date_str}@cn-ru-calendar")
+                        event.add('categories', 'Holiday,Russia')
+                        event.add('description', f'俄罗斯假期: {holiday_name}')
+                        event.add('transp', 'TRANSPARENT')
+                        cal.add_component(event)
+                        ru_count += 1
+                    except Exception as e:
+                        print(f"    ❌ 添加俄罗斯假期 {holiday_date_str} ({holiday_name}) 失败: {e}")
                     
         except Exception as e:
             print(f"  ❌ 获取 {year} 年俄罗斯假期失败: {e}")
