@@ -2,9 +2,9 @@ name: Update Holidays Calendar
 
 on:
   schedule:
-    # 每个月的第一天 00:00 UTC 运行
+    # 每个月1号 00:00 UTC 运行
     - cron: '0 0 1 * *'
-  # 也支持手动触发
+  # 也可以手动触发
   workflow_dispatch:
 
 jobs:
@@ -26,33 +26,12 @@ jobs:
           pip install -r requirements.txt
 
       - name: Generate calendar
-        run: |
-          python generate.py
+        run: python generate.py
 
-      - name: Check if calendar changed
-        id: calendar_changed
+      - name: Commit and push
         run: |
-          if git diff --quiet calendar.ics; then
-            echo "changed=false" >> $GITHUB_OUTPUT
-          else
-            echo "changed=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Commit and push changes
-        if: steps.calendar_changed.outputs.changed == 'true'
-        run: |
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
           git add calendar.ics
-          git commit -m "chore: auto update holidays calendar $(date -u +'%Y-%m-%d')"
+          git commit -m "🤖 自动更新节假日日历 $(date +%Y-%m-%d)" || true
           git push
-
-      - name: Create Pull Request
-        if: steps.calendar_changed.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "Auto update holidays calendar"
-          title: "🗓️ Auto: Update holidays calendar"
-          body: "Automatically updated holidays calendar for current period"
-          branch: auto/update-calendar
