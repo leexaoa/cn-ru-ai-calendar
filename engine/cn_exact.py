@@ -1,17 +1,7 @@
-import requests
-
-def fetch_cn_raw(year):
-    url = f"https://cdn.jsdelivr.net/gh/NateScarlet/holiday-cn@master/{year}.json"
-    return requests.get(url).json()
-
 def parse_cn(data):
-    holidays = []
-    workdays = []
+    # 这个数据源直接返回的是假期日期列表
+    holidays = data if isinstance(data, list) else []
 
-    for item in data:
-        if item.get("isOffDay"):
-            holidays.append(item["date"])
-        if item.get("isWorkDay"):
-            workdays.append(item["date"])
+    workdays = []
 
     return holidays, workdays
