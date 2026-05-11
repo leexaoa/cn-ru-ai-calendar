@@ -8,6 +8,10 @@ on:
   # 也可以手动触发
   workflow_dispatch:
 
+permissions:
+  contents: write  # 允许推送提交
+  actions: write   # 允许运行工作流
+
 jobs:
   update-holidays:
     runs-on: ubuntu-latest
