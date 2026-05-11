@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 
 def to_date(d):
     return datetime.strptime(d, "%Y-%m-%d").date()
@@ -6,7 +6,7 @@ def to_date(d):
 
 def cluster_dates(dates):
     """
-    把连续日期合并成区间
+    连续日期合并为区间
     """
     if not dates:
         return []
@@ -27,3 +27,10 @@ def cluster_dates(dates):
 
     clusters.append((start, prev))
     return clusters
+
+
+def is_golden_week(start, end):
+    """
+    ≥7天判定为黄金周
+    """
+    return (end - start).days + 1 >= 7
