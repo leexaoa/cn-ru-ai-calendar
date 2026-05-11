@@ -2,7 +2,7 @@ name: update calendar
 
 permissions:
   contents: write
-  
+
 on:
   schedule:
     - cron: "0 0 * * *"
@@ -13,23 +13,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-    - name: setup python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.10"
+      - name: setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-    - name: install
-      run: pip install ics
+      - name: install dependencies
+        run: |
+          pip install requests holidays icalendar
 
-    - name: generate
-      run: python generate.py
+      - name: generate calendar
+        run: python generate.py
 
-    - name: commit
-      run: |
-        git config user.name bot
-        git config user.email bot@github.com
-        git add calendar.ics
-        git commit -m "update" || echo "no change"
-        git push
+      - name: commit changes
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add calendar.ics
+          git commit -m "auto update calendar" || exit 0
+          git push
