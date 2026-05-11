@@ -6,7 +6,7 @@
 
 from datetime import datetime, timedelta, timezone
 from icalendar import Calendar, Event
-from engine.cn_exact import fetch_cn_raw, parse_cn
+from engine.cn_exact import fetch_cn_holidays
 from engine.ru import fetch_ru_holidays
 
 def generate_calendar():
@@ -30,29 +30,32 @@ def generate_calendar():
     cn_count = 0
     ru_count = 0
     
+    # 处理中国假期
     for year in [current_year - 1, current_year, current_year + 1, current_year + 2]:
-        print(f"\n🔄 处理 {year} 年...")
-        
-        # 处理中国假期
         try:
+            print(f"\n🔄 处理 {year} 年...")
             print(f"  🇨🇳 获取中国假期...")
-            raw_data = fetch_cn_raw(year)
-            cn_holidays, cn_workdays = parse_cn(raw_data)
             
-            print(f"  ✓ 获得 {len(cn_holidays)} 个中国假期")
+            cn_holidays_list = fetch_cn_holidays(year)
+            
+            if not cn_holidays_list:
+                print(f"  ℹ️ {year}年没有中国假期数据")
+                continue
+            
+            print(f"  ✓ 获得 {len(cn_holidays_list)} 个中国假期")
             
             # 添加中国假期到日历
-            for holiday_date_str in cn_holidays:
+            for holiday_name, holiday_date_str in cn_holidays_list:
                 try:
                     holiday_date = datetime.strptime(holiday_date_str, '%Y-%m-%d').date()
                     event = Event()
-                    event.add('summary', '🇨🇳 中国假期')
+                    event.add('summary', f'🇨🇳 {holiday_name}')
                     event.add('dtstart', holiday_date)
                     event.add('dtend', holiday_date + timedelta(days=1))
                     event.add('dtstamp', datetime.now(timezone.utc))
                     event.add('uid', f"cn-holiday-{holiday_date_str}@cn-ru-calendar")
                     event.add('categories', 'Holiday,China')
-                    event.add('description', f'中国假期: {holiday_date_str}')
+                    event.add('description', f'中国假期: {holiday_name} ({holiday_date_str})')
                     event.add('transp', 'TRANSPARENT')
                     cal.add_component(event)
                     cn_count += 1
@@ -67,6 +70,10 @@ def generate_calendar():
         try:
             print(f"  🇷🇺 获取 {year} 年俄罗斯假期...")
             ru_holidays_list = fetch_ru_holidays(year)
+            
+            if not ru_holidays_list:
+                print(f"  ℹ️ {year}年没有俄罗斯假期数据")
+                continue
             
             print(f"  ✓ 获得 {len(ru_holidays_list)} 个俄罗斯假期")
             
