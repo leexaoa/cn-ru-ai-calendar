@@ -1,29 +1,42 @@
-from ics import Calendar, Event
+from datetime import datetime
+from icalendar import Calendar, Event
 
-cal = Calendar()
+from engine.cn_exact import fetch_cn_raw, parse_cn
+from engine.ru import fetch_ru
 
-ru = [
-    ("🇷🇺 New Year", "2026-01-01"),
-    ("🇷🇺 Victory Day", "2026-05-09"),
-]
+def build_ics(events):
+    cal = Calendar()
 
-cn = [
-    ("🇨🇳 Spring Festival", "2026-02-17"),
-    ("🇨🇳 National Day", "2026-10-01"),
-]
+    for e in events:
+        ev = Event()
+        ev.add("summary", e["name"])
+        ev.add("dtstart", datetime.strptime(e["date"], "%Y-%m-%d").date())
+        ev.add("dtend", datetime.strptime(e["date"], "%Y-%m-%d").date())
+        cal.add_component(ev)
 
-def add(name, day):
-    e = Event()
-    e.name = name
-    e.begin = day
-    e.make_all_day()
-    cal.events.add(e)
+    with open("calendar.ics", "wb") as f:
+        f.write(cal.to_ical())
 
-for i in ru:
-    add(i[0], i[1])
+def main():
+    year = datetime.now().year
 
-for i in cn:
-    add(i[0], i[1])
+    # 🇨🇳 中国（精确调休）
+    cn_raw = fetch_cn_raw(year)
+    holidays, workdays = parse_cn(cn_raw)
 
-with open("calendar.ics", "w") as f:
-    f.writelines(cal)
+    cn_events = []
+    for d in holidays:
+        cn_events.append({"date": d, "name": "🇨🇳 节假日"})
+    for d in workdays:
+        cn_events.append({"date": d, "name": "🇨🇳 补班"})
+
+    # 🇷🇺 俄罗斯
+    ru_events = fetch_ru(year)
+
+    # 合并
+    events = cn_events + ru_events
+
+    build_ics(events)
+
+if __name__ == "__main__":
+    main()
