@@ -1,158 +1,159 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+"""自动更新中国和俄罗斯假期数据到日历"""
 
-import json
 import requests
 from datetime import datetime, timedelta
-import urllib.request
-import urllib.error
+from icalendar import Calendar, Event
+import pytz
+from pathlib import Path
 
-def fetch_cn_holidays():
-    """获取中国假期数据（根据国务院2025年11月4日官方通知）"""
-    
-    # 2026年中国官方假期
-    cn_holidays = {
-        # 元旦：1月1日（周四）至3日（周六）放假调休，共3天
-        "2026-01-01": "元旦",
-        "2026-01-02": "元旦",
-        "2026-01-03": "元旦",
-        # 春节：2月15日（农历腊月二十八、周日）至23日（农历正月初七、周一）放假调休，共9天
-        "2026-02-15": "春节",
-        "2026-02-16": "春节",
-        "2026-02-17": "春节",
-        "2026-02-18": "春节",
-        "2026-02-19": "春节",
-        "2026-02-20": "春节",
-        "2026-02-21": "春节",
-        "2026-02-22": "春节",
-        "2026-02-23": "春节",
-        # 清明节：4月4日（周六）至6日（周一）放假，共3天
-        "2026-04-04": "清明节",
-        "2026-04-05": "清明节",
-        "2026-04-06": "清明节",
-        # 劳动节：5月1日（周五）至5日（周二）放假调休，共5天
-        "2026-05-01": "劳动节",
-        "2026-05-02": "劳动节",
-        "2026-05-03": "劳动节",
-        "2026-05-04": "劳动节",
-        "2026-05-05": "劳动节",
-        # 端午节：6月19日（周五）至21日（周日）放假，共3天
-        "2026-06-19": "端午节",
-        "2026-06-20": "端午节",
-        "2026-06-21": "端午节",
-        # 中秋节：9月25日（周五）至27日（周日）放假，共3天
-        "2026-09-25": "中秋节",
-        "2026-09-26": "中秋节",
-        "2026-09-27": "中秋节",
-        # 国庆节：10月1日（周四）至7日（周三）放假调休，共7天
-        "2026-10-01": "国庆节",
-        "2026-10-02": "国庆节",
-        "2026-10-03": "国庆节",
-        "2026-10-04": "国庆节",
-        "2026-10-05": "国庆节",
-        "2026-10-06": "国庆节",
-        "2026-10-07": "国庆节",
-    }
-    
-    # 调休补班工作日
-    cn_workdays = {
-        # 元旦：1月4日（周日）上班
-        "2026-01-04": "调休补班（元旦）",
-        # 春节：2月14日（周六）、2月28日（周六）上班
-        "2026-02-14": "调休补班（春节）",
-        "2026-02-28": "调休补班（春节）",
-        # 劳动节：5月9日（周六）上班
-        "2026-05-09": "调休补班（劳动节）",
-        # 国庆节：9月20日（周日）、10月10日（周六）上班
-        "2026-09-20": "调休补班（国庆节）",
-        "2026-10-10": "调休补班（国庆节）",
-    }
-    
-    return cn_holidays, cn_workdays
 
-def fetch_russia_holidays():
-    """从Google Calendar获取俄罗斯假期数据"""
-    
+def fetch_cn_holidays(year):
+    """从官方holiday-cn源自动获取中国假期数据"""
     try:
-        # 尝试从Google Calendar获取俄罗斯假期
-        url = "https://calendar.google.com/calendar/ical/en.russian%23holiday%40group.v.calendar.google.com/public/basic.ics"
+        # 使用JSDelivr加速的holiday-cn数据源，自动从国务院公告抓取
+        url = f"https://cdn.jsdelivr.net/gh/NateScarlet/holiday-cn@master/{year}.json"
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
         
-        req = urllib.request.Request(url)
-        req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
+        data = response.json()
+        cn_holidays = {}
         
-        with urllib.request.urlopen(req, timeout=5) as response:
-            content = response.read().decode('utf-8')
-        
-        # 解析ICS格式的假期数据
-        ru_holidays = {}
-        ru_workdays = {}
-        
-        lines = content.split('\n')
-        i = 0
-        while i < len(lines):
-            line = lines[i]
+        # 将官方数据转换为字典格式
+        for day in data.get('days', []):
+            date = day['date']
+            name = day['name']
+            is_off = day['isOffDay']
             
-            if line.startswith('DTSTART;VALUE=DATE:'):
-                date_str = line.replace('DTSTART;VALUE=DATE:', '')
-                # 格式转换: 20260101 -> 2026-01-01
-                if len(date_str) >= 8:
-                    formatted_date = f"{date_str[0:4]}-{date_str[4:6]}-{date_str[6:8]}"
-                    
-                    # 查找对应的SUMMARY（假期名称）
-                    summary = ""
-                    j = i + 1
-                    while j < len(lines) and not lines[j].startswith('DTSTART') and not lines[j].startswith('BEGIN:'):
-                        if lines[j].startswith('SUMMARY:'):
-                            summary = lines[j].replace('SUMMARY:', '')
-                            break
-                        j += 1
-                    
-                    if summary and "holiday" not in summary.lower():
-                        # 这可能是工作日
-                        ru_workdays[formatted_date] = summary
-                    elif summary:
-                        ru_holidays[formatted_date] = summary
-            
-            i += 1
+            # 只记录假日和调休日期（isOffDay为true的都是非工作日）
+            if is_off:
+                cn_holidays[date] = name
         
-        # 如果成功获取到假期数据
-        if ru_holidays:
-            return ru_holidays, ru_workdays
+        return cn_holidays
     
-    except Exception as e:
-        print(f"⚠️  从Google Calendar获取俄罗斯假期失败: {e}")
-    
-    # 降级到静态数据
-    ru_holidays = {
-        # 2026年俄罗斯官方假期
-        "2026-01-01": "New Year",
-        "2026-01-02": "New Year",
-        "2026-01-03": "New Year",
-        "2026-01-04": "New Year",
-        "2026-01-05": "New Year",
-        "2026-01-06": "New Year",
-        "2026-01-07": "Orthodox Christmas",
-        "2026-01-08": "New Year holidays",
-        "2026-02-23": "Defender of the Fatherland Day",
-        "2026-03-08": "International Women's Day",
-        "2026-05-01": "Labour Day",
-        "2026-05-09": "Victory Day",
-        "2026-06-12": "Russia Day",
-        "2026-11-04": "Unity Day",
-    }
-    
-    ru_workdays = {}
-    
-    return ru_holidays, ru_workdays
+    except requests.exceptions.RequestException as e:
+        print(f"  ❌ 获取 {year} 年中国假期失败: {e}")
+        return {}
 
-def get_all_holidays():
-    """获取所有假期数据"""
-    cn_holidays, cn_workdays = fetch_cn_holidays()
-    ru_holidays, ru_workdays = fetch_russia_holidays()
+
+def fetch_ru_holidays():
+    """从谷歌日历获取俄罗斯假期"""
+    try:
+        # 俄罗斯官方假期Google Calendar (俄文)
+        url = "https://calendar.google.com/calendar/ical/en.russian%23holiday%40group.v.calendar.google.com/public/basic.ics"
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        
+        # 解析ICS内容
+        cal = Calendar.from_ical(response.content)
+        ru_holidays = {}
+        
+        for component in cal.walk():
+            if component.name == "VEVENT":
+                dt = component.get('dtstart')
+                if dt:
+                    # 转换为日期字符串 YYYY-MM-DD
+                    if hasattr(dt.dt, 'date'):
+                        date_str = dt.dt.date().isoformat()
+                    else:
+                        date_str = dt.dt.isoformat()
+                    
+                    summary = str(component.get('summary', 'Holiday'))
+                    ru_holidays[date_str] = summary
+        
+        return ru_holidays
     
-    return {
-        'cn_holidays': cn_holidays,
-        'cn_workdays': cn_workdays,
-        'ru_holidays': ru_holidays,
-        'ru_workdays': ru_workdays,
-    }
+    except requests.exceptions.RequestException as e:
+        print(f"  ❌ 获取俄罗斯假期失败: {e}")
+        return {}
+
+
+def create_ics_calendar(cn_holidays_all, ru_holidays_all):
+    """创建ICS日历文件"""
+    cal = Calendar()
+    cal.add('prodid', '-//CN-RU Holiday Calendar//CN//')
+    cal.add('version', '2.0')
+    cal.add('x-wr-calname', 'China & Russia Holidays')
+    cal.add('x-wr-timezone', 'Asia/Shanghai')
+    cal.add('x-wr-caldesc', 'China and Russia official holidays and makeup workdays')
+    
+    # 添加中国假期
+    for date_str, name in cn_holidays_all.items():
+        event = Event()
+        event.add('summary', f'🇨🇳 {name}')
+        event.add('dtstart', datetime.fromisoformat(date_str).date())
+        event.add('dtend', (datetime.fromisoformat(date_str) + timedelta(days=1)).date())
+        event.add('uid', f'cn-{date_str}@cn-ru-calendar')
+        event.add('description', f'China: {name}')
+        cal.add_component(event)
+    
+    # 添加俄罗斯假期
+    for date_str, name in ru_holidays_all.items():
+        event = Event()
+        event.add('summary', f'🇷🇺 {name}')
+        # 处理日期格式
+        try:
+            event_date = datetime.fromisoformat(date_str).date()
+            event.add('dtstart', event_date)
+            event.add('dtend', event_date + timedelta(days=1))
+        except:
+            continue
+        event.add('uid', f'ru-{date_str}@cn-ru-calendar')
+        event.add('description', f'Russia: {name}')
+        cal.add_component(event)
+    
+    return cal
+
+
+def main():
+    """主函数"""
+    print("\n📅 开始生成日历...")
+    print(f"📍 当前年份: {datetime.now().year}")
+    
+    cn_holidays_all = {}
+    ru_holidays_all = {}
+    
+    # 获取过去1年、当前年和未来2年的假期
+    years_to_fetch = [2025, 2026, 2027, 2028]
+    
+    for year in years_to_fetch:
+        print(f"\n🔄 处理 {year} 年...")
+        
+        # 获取中国假期
+        print(f"  🇨🇳 获取中国假期...")
+        cn_holidays = fetch_cn_holidays(year)
+        if cn_holidays:
+            print(f"     ✅ 成功获取 {len(cn_holidays)} 条数据")
+            cn_holidays_all.update(cn_holidays)
+        else:
+            print(f"     ❌ 获取失败或无数据")
+        
+        # 仅在处理第一年时获取俄罗斯假期（因为Google Calendar源是全年的）
+        if year == 2025:
+            print(f"  🇷🇺 获取俄罗斯假期...")
+            ru_holidays = fetch_ru_holidays()
+            if ru_holidays:
+                print(f"     ✅ 成功获取 {len(ru_holidays)} 条数据")
+                ru_holidays_all.update(ru_holidays)
+            else:
+                print(f"     ❌ 获取失败或无数据")
+    
+    # 创建并保存日历
+    cal = create_ics_calendar(cn_holidays_all, ru_holidays_all)
+    
+    output_file = Path(__file__).parent.parent / 'calendar.ics'
+    with open(output_file, 'wb') as f:
+        f.write(cal.to_ical())
+    
+    # 统计信息
+    total_cn = len(cn_holidays_all)
+    total_ru = len(ru_holidays_all)
+    
+    print(f"\n✅ 日历文件已生成!")
+    print(f"   📊 总计: {total_cn} 个中国假期 + {total_ru} 个俄罗斯假期")
+    print(f"   💾 文件: {output_file}")
+    print(f"   🔗 订阅链接: https://leexaoa.github.io/cn-ru-ai-calendar/calendar.ics\n")
+
+
+if __name__ == '__main__':
+    main()
